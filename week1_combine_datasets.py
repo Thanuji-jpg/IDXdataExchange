@@ -1,0 +1,111 @@
+import glob
+import os
+import pandas as pd
+
+# --- SOLD DATA ---
+
+# Finds all .csv files that start with "CRMLSSold"
+sold_file_pattern = "data/CRMLSSold*.csv"
+all_sold_files = sorted(glob.glob(sold_file_pattern))
+
+# Keep one sold file per month (skip _filled if regular file exists for that month)
+sold_files_to_use = []
+for filename in all_sold_files:
+    month = os.path.basename(filename)[9:15]  # e.g. "202403" from CRMLSSold202403.csv
+    # Skip _filled version when the regular file for that month is also in the folder
+    if "_filled" in filename:
+        regular_file = f"data/CRMLSSold{month}.csv"
+        if regular_file in all_sold_files:
+            continue
+    sold_files_to_use.append(filename)
+
+# Initialize an empty list to store the individual data frames
+sold_df_list = []
+
+# Initialize an empty list to track row counts before concatenation
+total_entries_sold = []
+
+# Use a for loop to read each file and add it to the list
+for filename in sold_files_to_use:
+    try:
+        sold_df = pd.read_csv(filename)
+        total_entries_sold.append(len(sold_df))
+        sold_df_list.append(sold_df)
+    except UnicodeDecodeError:
+        sold_df = pd.read_csv(filename, encoding="cp1252")
+        total_entries_sold.append(len(sold_df))
+        sold_df_list.append(sold_df)
+
+# Concatenates all data frames to create final sold data frame
+combined_sold_df = pd.concat(sold_df_list, ignore_index=True)
+
+# Removes the last two columns in the data frame (extra columns)
+combined_sold_df = combined_sold_df.drop(columns=['latfilled', 'lonfilled'])
+
+# Prints row counts before concatenation
+print("SOLD - files used:", len(sold_files_to_use))
+print("SOLD - avg rows per file:", round(sum(total_entries_sold) / len(total_entries_sold), 0))
+print("SOLD - total rows BEFORE concatenation:", sum(total_entries_sold))
+print("SOLD - total rows AFTER concatenation:", len(combined_sold_df))
+
+# Before total amount of rows before concatenation: (sum of all monthly files)
+# After total amount of rows after concatenation: (should match sum above)
+
+# Filters the Property Type to 'Residential' only
+combined_sold_df = combined_sold_df[combined_sold_df['PropertyType'] == 'Residential']
+
+# Prints the amount of rows after the filter
+print("SOLD - total rows AFTER Residential filter:", len(combined_sold_df))
+
+# Before total amount of rows before filter: (see print above)
+# After total amount of rows after filter: (see print above)
+
+# Save the combined data frame to a new .csv file
+combined_sold_df.to_csv("combined_datasets/combined_sold_df.csv", index=False)
+
+
+# --- LISTING DATA ---
+
+# Finds all .csv files that start with "CRMLSListing"
+listing_file_pattern = "data/CRMLSListing*.csv"
+all_listing_files = glob.glob(listing_file_pattern)
+
+# Initialize an empty list to store the individual data frames
+listing_df_list = []
+
+# Initialize an empty list to track row counts before concatenation
+total_entries_listing = []
+
+# Use a for loop to read each file and add it to the list
+for filename in all_listing_files:
+    try:
+        listing_df = pd.read_csv(filename)
+        total_entries_listing.append(len(listing_df))
+        listing_df_list.append(listing_df)
+    except UnicodeDecodeError:
+        listing_df = pd.read_csv(filename, encoding="cp1252")
+        total_entries_listing.append(len(listing_df))
+        listing_df_list.append(listing_df)
+
+# Concatenates all data frames to create final listing data frame
+combined_listing_df = pd.concat(listing_df_list, ignore_index=True)
+
+# Prints row counts before concatenation
+print("\nLISTINGS - avg rows per file:", round(sum(total_entries_listing) / len(total_entries_listing), 0))
+print("LISTINGS - total rows BEFORE concatenation:", sum(total_entries_listing))
+print("LISTINGS - total rows AFTER concatenation:", len(combined_listing_df))
+
+# Before total amount of rows before concatenation: (sum of all monthly files)
+# After total amount of rows after concatenation: (should match sum above)
+
+# Filters the Property Type to 'Residential' only
+combined_listing_df = combined_listing_df[combined_listing_df['PropertyType'] == 'Residential']
+
+# Prints the amount of rows after the filter
+print("LISTINGS - total rows AFTER Residential filter:", len(combined_listing_df))
+
+# Before total amount of rows before filter: (see print above)
+# After total amount of rows after filter: (see print above)
+
+# Save the combined data frame to a new .csv file
+combined_listing_df.to_csv("combined_datasets/combined_listing_df.csv", index=False)
